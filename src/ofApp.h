@@ -101,14 +101,16 @@ private:
 	ofShader_check m_shader;
 	ofFbo m_fbo;
 
-	float m_width;
-	float m_height;
+    ofVec2f m_anchor;
+    ofVec2f m_size_image;
 
 	ofxPanel m_gui;
 	ofParameterGroup m_parameters;
 	ofParameter<ofVec2f> m_pos;
 	ofParameter<float> m_scale;
 	ofParameter<bool> m_edit;
+
+    ofParameter<float> m_dcol;
 
 	ofXml m_settings;
 
