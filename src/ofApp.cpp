@@ -1,11 +1,19 @@
 #include "ofApp.h"
 
 #define SETTING_FILE "settings.xml"
+#define IMAGE_FILENAME "IMG_20170722_171059.jpg"
+
+//#define IMAGE_FILENAME "IMG_20170722_171059.jpg"
+//#define IMAGE_FILENAME "IMG_20170722_171044.jpg"
+
+//#define IMAGE_FILENAME "Kawg-7Ip1lo.png"
+
+//#define IMAGE_FILENAME "iI6L9sm9c78.jpg"
+#define IMAGE_FILENAME "AfDOYDIxkd8.jpg"
+
+#define VIDEO_FILENAME "VID_20170722_163702.mp4_"
 //--------------------------------------------------------------
 void ofApp::setup(){
-	image.loadImage("background.png");
-	anchor = ofVec2f(.5);
-	image.setAnchorPercent(anchor.x, anchor.y);
 
 	if(ofIsGLProgrammableRenderer()){
 		shader.load("shadersGL3/shader");
@@ -15,16 +23,18 @@ void ofApp::setup(){
 		DebugBreak();
 	}
 
-	size_image = ofVec2f(image.getWidth(), image.getHeight());
-	//fbo.allocate(width, height);
 	hasAltPress = false;
 	dMouse = ofVec2f(0);
-
+	u_point = ofVec2f(.0);
+	//-------------------------------
 	parameters.setName("settings");
 	parameters.add(pos.set("pos", ofVec2f(0), ofVec2f(-2000.), ofVec2f(2000.)));
 	parameters.add(scale.set("scale", 1., .1, 3.));
 	parameters.add(edit.set("isEdit", false));
 	parameters.add(dcol.set("d_col", .5, .0, 1.));
+	parameters.add(mult.set("mult", 1., .0, 1.));
+
+	parameters.add(size_box.set("size_box", 1., 1., 100.));
 
 	gui.setup(parameters);
 	gui.loadFromFile(SETTING_FILE);
@@ -35,8 +45,41 @@ void ofApp::setup(){
 	ofSetVerticalSync(true);
 
 	//-------------------------------
+
+	movie.load(VIDEO_FILENAME);
+	movie.setLoopState(OF_LOOP_NORMAL);
+	movie.play();
+	movie.setSpeed(.25);
+
+	if(movie.isLoaded()){
+		size_image = ofVec2f(movie.getWidth(), movie.getHeight());
+	}
+	else if(image.loadImage(IMAGE_FILENAME)){
+		size_image = ofVec2f(image.getWidth(), image.getHeight());
+
+	}
+	else{
+		DebugBreak();
+	}
+	anchor = ofVec2f(.5);
+	//image.setAnchorPercent(anchor.x, anchor.y);
+
+
+	fbo.allocate(size_image.x, size_image.y, GL_RGBA);
+	fbo.setAnchorPercent(anchor.x, anchor.y);
+
+	//-------------------------------
 	hasCaptureFrame = false;
-	gifEncoder.setup(size_image.x, size_image.y, .25, 256);
+	gif_size = size_image;// *.5;
+
+	gifEncoder.setup(gif_size.x, gif_size.y, .60, 256);
+	ofAddListener(ofxGifEncoder::OFX_GIF_SAVE_FINISHED, this, &ofApp::onGifSaved);
+
+	ofSetFullscreen(true);
+}
+
+void ofApp::onGifSaved(string &fileName){
+	cout << "gif saved as " << fileName << endl;
 }
 
 void ofApp::exit(){
@@ -50,13 +93,44 @@ void ofApp::exit(){
 void ofApp::update(){
 	shader.update();
 	image.update();
+	movie.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
 	ofBackgroundGradient(ofColor::white, ofColor::gray);
-	//_____________
-	//fbo.begin();
+	//--------------
+	fbo.begin();
+
+	shader.begin();
+	//shader.setUniformTexture("tex0", image.getTextureReference(), 1);
+	shader.setUniform2f("u_resolution", size_image);
+	ofVec2f t_u_point = point / size_image + anchor;
+	if(!( t_u_point.x<.0 || t_u_point.x>1. || t_u_point.y<.0 || t_u_point.y>1. ))
+		u_point = t_u_point;
+	shader.setUniform2f("u_point", u_point);
+	shader.setUniform1i("u_press", mousePress.x == -1 ? 0 : 1);
+	shader.setUniform1f("u_dcol", dcol.get());
+	shader.setUniform1f("u_time", (float) ofGetSystemTime() / 5000.f);
+	shader.setUniform1f("u_mult", mult.get());
+	shader.setUniform1f("u_size_box", size_box.get());
+
+	if(image.isAllocated()){
+		image.draw(0, 0);
+	}
+	else{
+		//ofSetHexColor(0xFFFFFF);
+
+		//shader.setUniformTexture("tex0", movie.getTextureReference(), 1);
+		movie.draw(0, 0);
+		//ofSetHexColor(0x000000);
+	}
+
+	shader.end();
+	fbo.end();
+
+	//--------------
+
 	ofPushMatrix();
 
 	ofTranslate(pos.get());
@@ -68,21 +142,7 @@ void ofApp::draw(){
 	ofDrawLine(ofVec2f(-10000.f, .0f), ofVec2f(+10000.f, .0f));
 
 	//-----------------------------------
-	shader.begin();
-	//shader.setUniform1f("mouseX", mouseX);
-	//shader.setUniformTexture("tex0", image.getTextureReference(), 1);
-	shader.setUniform2f("point", point / size_image + anchor);
-	shader.setUniform1i("press", mousePress.x == -1 ? 0 : 1);
-	shader.setUniform1f("dcol", dcol.get());
-	shader.setUniform1f("time", (float) ofGetSystemTime() / 5000.f);
-
-
-	image.draw(0, 0);
-
-	//fbo.draw(0, 0);
-	shader.end();
-	//fbo.end();
-
+	fbo.draw(0, 0);
 	//-----------------------------------
 	if(hasAltPress){
 		ofSetColor(ofColor::green);
@@ -93,15 +153,61 @@ void ofApp::draw(){
 
 	if(hasCaptureFrame){
 		ofSetColor(ofColor::red);
-		font.drawString("hasCapture enable :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 140);
+		font.drawString("hasCapture enable :" + ofToString(gifFrame), ofGetWidth() - 300, 140);
+
+
+#if 1
+		ofPixels pixels;
+		fbo.readToPixels(pixels);
+
+		float t_currTime = ofGetSystemTimeMicros();
+		if(lastGifTime < 0)
+			gifDuration = .1;
+		else
+			gifDuration = ( t_currTime - lastGifTime ) / 100000.;
+		gifDuration *= .25;
+		gifDuration = gifDuration < .0 ? .1 : gifDuration;
+		//gifDuration = .1f;
+		cout << gifDuration << "\n";
 
 		gifEncoder.addFrame(
-			image.getPixels().getData(),
-			image.getWidth(),
-			image.getHeight(),
-			image.getPixelsRef().getBitsPerPixel(),
-			.1f
+			pixels.getData(),
+			gif_size.x,
+			gif_size.y,
+			pixels.getBitsPerPixel(),
+			gifDuration
+			//.1f
 		);
+		gifFrame++;
+		lastGifTime = ofGetSystemTimeMicros();
+#else
+		ofPixels t_pixels;
+		fbo.readToPixels(t_pixels);
+		ofImage t_image(t_pixels);
+		t_image.resize(gif_size.x, gif_size.y);
+
+
+		float t_currTime = ofGetSystemTimeMicros();
+		if(lastGifTime < 0)
+			gifDuration = .1;
+		else
+			gifDuration = ( t_currTime - lastGifTime ) / 100000.;
+		gifDuration *= .5;
+		gifDuration = gifDuration < .0 ? .1 : gifDuration;
+		//gifDuration = .1f;
+		cout << gifDuration << "\n";
+
+		gifEncoder.addFrame(
+			t_image.getPixels().getData(),
+			gif_size.x,
+			gif_size.y,
+			t_image.getPixels().getBitsPerPixel(),
+			gifDuration
+			//.1f
+		);
+		gifFrame++;
+		lastGifTime = ofGetSystemTimeMicros();
+#endif
 	}
 
 	//-----------------------------------
@@ -119,7 +225,12 @@ void ofApp::keyPressed(int key){
 			hasAltPress = true;
 			break;
 		case ' ':
-			hasCaptureFrame = true;
+			if(!hasCaptureFrame){
+				gifEncoder.reset();
+				hasCaptureFrame = true;
+				gifFrame = 0;
+				lastGifTime = -1.;
+			}
 			break;
 	}
 }
@@ -135,7 +246,7 @@ void ofApp::keyReleased(int key){
 			break;
 		case 's':
 			cout << "start saving\n" << endl;
-			gifEncoder.save("test.gif");
+			gifEncoder.save(string(IMAGE_FILENAME) + "_test.gif");
 			break;
 	}
 }

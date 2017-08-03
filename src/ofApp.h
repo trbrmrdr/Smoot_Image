@@ -30,6 +30,7 @@ public:
 	virtual void dragEvent(ofDragInfo dragInfo);
 	virtual void gotMessage(ofMessage msg);
 
+	void onGifSaved(string &fileName);
 private:
 
 	ofImage image;
@@ -41,11 +42,15 @@ private:
 
 	ofxPanel gui;
 	ofParameterGroup parameters;
+	string lastFileName;
 	ofParameter<ofVec2f> pos;
 	ofParameter<float> scale;
 	ofParameter<bool> edit;
 
     ofParameter<float> dcol;
+	ofParameter<float> mult;
+
+	ofParameter<float> size_box;
 
 	ofXml settings;
 
@@ -58,8 +63,14 @@ private:
 
 	ofVec2f prevPos_point;
 	ofVec2f point;
-	
-
+	ofVec2f u_point;
+	//------------------------------
+	int gifFrame;
+	float lastGifTime;
+	float gifDuration;
 	bool hasCaptureFrame;
 	ofxGifEncoder gifEncoder;
+	ofVec2f gif_size;
+	//------------------------------
+	ofVideoPlayer 		movie;
 };

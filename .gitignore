@@ -2,3 +2,6 @@
 *.tlog
 *.sdf
 *.opendb
+*.exp
+*.ficache
+obj/
