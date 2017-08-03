@@ -1,3 +1,4 @@
+ofxGifEncoder
 ofxGpuParticles
 ofxGui
 ofxPostProcessing

@@ -33,6 +33,7 @@ mat2 rotateMat(in float alpha){
     float s = sin(alpha);
     return mat2(s,-c,c,s);
 }
+
 vec3 hsb2rgb( in vec3 c ){
     vec3 rgb = clamp(abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),
                              6.0)-3.0)-1.0, 
@@ -41,6 +42,7 @@ vec3 hsb2rgb( in vec3 c ){
     rgb = rgb*rgb*(3.0-2.0*rgb);
     return c.z * mix(vec3(1.0), rgb, c.y);
 }
+
 vec3 hsb2rgb( in float r,in float g,in float b){
     return hsb2rgb(vec3(r,g,b));
 }
@@ -58,23 +60,23 @@ void main()
     ret_col = mix( ret_col, vec4(1.,.5,.5,1), 1. - is_cur);
     
     if(
-        //isPress() && 
+        isPress() && 
         is_cur <= 1.){
         vec4 colC = getPointC(m_point * resolution);
         vec4 colT = ret_col;
         
-        float colorD = 1. - length(colT - colC);
+        float colorD = length(colT - colC);
         
-        float hasCol = colorD >=m_dcol ? 1.:0.;
+        float hasCol = colorD <=m_dcol ? 1.:0.;
         
         float d_speed = 1.-length( st - m_point) ;
         st*=10.;
         st+=m_time*.3;
         st*=rotateMat(length(colC));
-        vec4 newCol = vec4( vec3(hsb2rgb(st.x+sin(st.y+m_time*3.*hasCol),1.,1.)),1.);
+        vec4 newCol = vec4( vec3(hsb2rgb(st.x+sin(st.y+m_time*3.) + colorD,1.,1.)),1.);
     
         ret_col = mix( ret_col , newCol, hasCol);
-        //ret_col = newCol;
+        ret_col = newCol;
         //ret_col = mix(ret_col, vec4(1.,0.,0.,0.) ,colorD-1.);
     }
     

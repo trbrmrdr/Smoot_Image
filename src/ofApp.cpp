@@ -2,167 +2,202 @@
 
 #define SETTING_FILE "settings.xml"
 //--------------------------------------------------------------
-void ofApp::setup() {
-    m_image.loadImage("background.png");
-    m_anchor = ofVec2f(.5);
-    m_image.setAnchorPercent(m_anchor.x, m_anchor.y);
+void ofApp::setup(){
+	image.loadImage("background.png");
+	anchor = ofVec2f(.5);
+	image.setAnchorPercent(anchor.x, anchor.y);
 
-    if (ofIsGLProgrammableRenderer()) {
-        m_shader.load("shadersGL3/shader");
-    }
-    else {
-        m_shader.load("shadersGL2/shader");
-        DebugBreak();
-    }
+	if(ofIsGLProgrammableRenderer()){
+		shader.load("shadersGL3/shader");
+	}
+	else{
+		shader.load("shadersGL2/shader");
+		DebugBreak();
+	}
 
-    m_size_image = ofVec2f(m_image.getWidth(), m_image.getHeight());
-    //m_fbo.allocate(m_width, m_height);
-    isAltPress = false;
-    m_dMouse = ofVec2f(0);
+	size_image = ofVec2f(image.getWidth(), image.getHeight());
+	//fbo.allocate(width, height);
+	hasAltPress = false;
+	dMouse = ofVec2f(0);
 
-    m_parameters.setName("settings");
-    m_parameters.add(m_pos.set("pos", ofVec2f(0), ofVec2f(-2000.), ofVec2f(2000.)));
-    m_parameters.add(m_scale.set("scale", 1., .1, 3.));
-    m_parameters.add(m_edit.set("isEdit", false));
-    m_parameters.add(m_dcol.set("d_col", .5, .0, 1.));
+	parameters.setName("settings");
+	parameters.add(pos.set("pos", ofVec2f(0), ofVec2f(-2000.), ofVec2f(2000.)));
+	parameters.add(scale.set("scale", 1., .1, 3.));
+	parameters.add(edit.set("isEdit", false));
+	parameters.add(dcol.set("d_col", .5, .0, 1.));
 
-    m_gui.setup(m_parameters);
-    m_gui.loadFromFile(SETTING_FILE);
+	gui.setup(parameters);
+	gui.loadFromFile(SETTING_FILE);
 
-    m_font.loadFont(OF_TTF_SANS, 9, true, true);
-    ofEnableAlphaBlending();
-    ofEnableAntiAliasing();
-    ofSetVerticalSync(true);
+	font.loadFont(OF_TTF_SANS, 20, true, true);
+	ofEnableAlphaBlending();
+	ofEnableAntiAliasing();
+	ofSetVerticalSync(true);
+
+	//-------------------------------
+	hasCaptureFrame = false;
+	gifEncoder.setup(size_image.x, size_image.y, .25, 256);
 }
 
-void ofApp::exit() {
-    m_settings.serialize(m_parameters);
-    m_settings.save(SETTING_FILE);
-}
+void ofApp::exit(){
+	settings.serialize(parameters);
+	settings.save(SETTING_FILE);
 
-//--------------------------------------------------------------
-void ofApp::update() {
-    m_shader.update();
-    m_image.update();
-}
-
-//--------------------------------------------------------------
-void ofApp::draw() {
-    ofBackgroundGradient(ofColor::white, ofColor::gray);
-    //_____________
-    //m_fbo.begin();
-    ofPushMatrix();
-
-    ofTranslate(m_pos.get());
-    ofScale(m_scale.get(), m_scale.get());
-
-    //-----------------------------------
-    ofSetColor(ofColor::white);
-    ofDrawLine(ofVec2f(.0, -10000.f), ofVec2f(.0, +10000.f));
-    ofDrawLine(ofVec2f(-10000.f, .0f), ofVec2f(+10000.f, .0f));
-
-    //-----------------------------------
-    m_shader.begin();
-    //m_shader.setUniform1f("mouseX", mouseX);
-    //m_shader.setUniformTexture("tex0", m_image.getTextureReference(), 1);
-    m_shader.setUniform2f("m_point", m_point / m_size_image + m_anchor);
-    m_shader.setUniform1i("m_press", m_MousePress.x == -1 ? 0 : 1);
-    m_shader.setUniform1f("m_dcol", m_dcol.get());
-    m_shader.setUniform1f("m_time", (float) ofGetSystemTime() / 5000.f);
-
-    m_image.draw(0, 0);
-
-    //m_fbo.draw(0, 0);
-    m_shader.end();
-    //m_fbo.end();
-
-    //-----------------------------------
-    if (isAltPress) {
-        ofSetColor(ofColor::green);
-        ofDrawCircle(m_point, 10);
-    }
-
-    ofPopMatrix();
-    //-----------------------------------
-    //m_fbo.draw(m_width*.5 - mouseX, m_height*.5 - mouseY, m_width, m_height);
-
-
-    m_gui.draw();
-    m_font.drawString("fps :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 40);
+	gifEncoder.exit();
 }
 
 //--------------------------------------------------------------
-void ofApp::keyPressed(int key) {
-    if (key == OF_KEY_ALT) {
-        isAltPress = true;
-    }
+void ofApp::update(){
+	shader.update();
+	image.update();
 }
 
 //--------------------------------------------------------------
-void ofApp::keyReleased(int key) {
-    if (key == OF_KEY_ALT) {
-        isAltPress = false;
-    }
+void ofApp::draw(){
+	ofBackgroundGradient(ofColor::white, ofColor::gray);
+	//_____________
+	//fbo.begin();
+	ofPushMatrix();
+
+	ofTranslate(pos.get());
+	ofScale(scale.get(), scale.get());
+
+	//-----------------------------------
+	ofSetColor(ofColor::white);
+	ofDrawLine(ofVec2f(.0, -10000.f), ofVec2f(.0, +10000.f));
+	ofDrawLine(ofVec2f(-10000.f, .0f), ofVec2f(+10000.f, .0f));
+
+	//-----------------------------------
+	shader.begin();
+	//shader.setUniform1f("mouseX", mouseX);
+	//shader.setUniformTexture("tex0", image.getTextureReference(), 1);
+	shader.setUniform2f("point", point / size_image + anchor);
+	shader.setUniform1i("press", mousePress.x == -1 ? 0 : 1);
+	shader.setUniform1f("dcol", dcol.get());
+	shader.setUniform1f("time", (float) ofGetSystemTime() / 5000.f);
+
+
+	image.draw(0, 0);
+
+	//fbo.draw(0, 0);
+	shader.end();
+	//fbo.end();
+
+	//-----------------------------------
+	if(hasAltPress){
+		ofSetColor(ofColor::green);
+		ofDrawCircle(point, 10);
+	}
+
+	ofPopMatrix();
+
+	if(hasCaptureFrame){
+		ofSetColor(ofColor::red);
+		font.drawString("hasCapture enable :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 140);
+
+		gifEncoder.addFrame(
+			image.getPixels().getData(),
+			image.getWidth(),
+			image.getHeight(),
+			image.getPixelsRef().getBitsPerPixel(),
+			.1f
+		);
+	}
+
+	//-----------------------------------
+	//fbo.draw(width*.5 - mouseX, height*.5 - mouseY, width, height);
+
+	gui.draw();
+	ofSetColor(ofColor::green);
+	font.drawString("fps :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 40);
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseMoved(int x, int y) {
-    //m_point = ( ofVec2f(x, y) - m_pos.get() ) / m_scale.get();
+void ofApp::keyPressed(int key){
+	switch(key){
+		case OF_KEY_ALT:
+			hasAltPress = true;
+			break;
+		case ' ':
+			hasCaptureFrame = true;
+			break;
+	}
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseScrolled(int x, int y, float scrollX, float scrollY) {
-    if (isAltPress && m_edit.get()) {
-        m_scale.set(m_scale.get() + .1*scrollY);
-    }
+void ofApp::keyReleased(int key){
+	switch(key){
+		case OF_KEY_ALT:
+			hasAltPress = false;
+			break;
+		case ' ':
+			hasCaptureFrame = false;
+			break;
+		case 's':
+			cout << "start saving\n" << endl;
+			gifEncoder.save("test.gif");
+			break;
+	}
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseDragged(int x, int y, int button) {
-    if (m_MousePress.x == -1) return;
-
-    if (isAltPress && m_edit.get()) {
-        m_dMouse = m_MousePress - ofVec2f(x, y) - m_prevPos_image;
-        m_pos.set(ofVec2f(-1.) * m_dMouse);
-    }
-    else {
-        m_point = ( ofVec2f(x, y) - m_pos.get() ) / m_scale.get();
-    }
+void ofApp::mouseMoved(int x, int y){
+	//point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
 }
 
 //--------------------------------------------------------------
-void ofApp::mousePressed(int x, int y, int button) {
-    m_MousePress = ofVec2f(x, y);
-    m_prevPos_image = m_pos.get();
-    m_prevPos_point = m_point;
+void ofApp::mouseScrolled(int x, int y, float scrollX, float scrollY){
+	if(hasAltPress && edit.get()){
+		scale.set(scale.get() + .1*scrollY);
+	}
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseReleased(int x, int y, int button) {
-    m_MousePress.x = -1.f;
+void ofApp::mouseDragged(int x, int y, int button){
+	if(mousePress.x == -1) return;
+
+	if(hasAltPress && edit.get()){
+		dMouse = mousePress - ofVec2f(x, y) - prevPos_image;
+		pos.set(ofVec2f(-1.) * dMouse);
+	}
+	else{
+		point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
+	}
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseEntered(int x, int y) {
+void ofApp::mousePressed(int x, int y, int button){
+	mousePress = ofVec2f(x, y);
+	prevPos_image = pos.get();
+	prevPos_point = point;
+}
+
+//--------------------------------------------------------------
+void ofApp::mouseReleased(int x, int y, int button){
+	mousePress.x = -1.f;
+}
+
+//--------------------------------------------------------------
+void ofApp::mouseEntered(int x, int y){
 
 }
 
 //--------------------------------------------------------------
-void ofApp::mouseExited(int x, int y) {
+void ofApp::mouseExited(int x, int y){
 
 }
 
 //--------------------------------------------------------------
-void ofApp::windowResized(int w, int h) {
+void ofApp::windowResized(int w, int h){
 
 }
 
 //--------------------------------------------------------------
-void ofApp::gotMessage(ofMessage msg) {
+void ofApp::gotMessage(ofMessage msg){
 
 }
 
 //--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo) {
+void ofApp::dragEvent(ofDragInfo dragInfo){
 
 }
