@@ -73,4 +73,6 @@ private:
 	ofVec2f gif_size;
 	//------------------------------
 	ofVideoPlayer 		movie;
+    //-----------------------------
+    ofVideoGrabber vidGrabber;
 };
