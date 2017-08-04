@@ -1,8 +1,8 @@
 <settings>
-	<pos>907, 443</pos>
-	<scale>0.9255</scale>
+	<pos>944, 592</pos>
+	<scale>0.9055</scale>
 	<isEdit>1</isEdit>
-	<d_col>0.935</d_col>
-	<mult>0.05</mult>
-	<size_box>1.99</size_box>
+	<d_col>1</d_col>
+	<mult>0.025</mult>
+	<size_box>6.445</size_box>
 </settings>

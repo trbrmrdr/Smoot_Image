@@ -1,7 +1,7 @@
 #include "ofApp.h"
 
 #define SETTING_FILE "settings.xml"
-#define IMAGE_FILENAME "IMG_20170722_171059.jpg"
+#define IMAGE_FILENAME "background.png"
 
 //#define IMAGE_FILENAME "IMG_20170722_171059.jpg"
 //#define IMAGE_FILENAME "IMG_20170722_171044.jpg"
@@ -16,145 +16,166 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
 
-	if(ofIsGLProgrammableRenderer()){
-		shader.load("shadersGL3/shader");
-	}
-	else{
-		shader.load("shadersGL2/shader");
-		DebugBreak();
-	}
+    if(ofIsGLProgrammableRenderer()){
+        shader.load("shadersGL3/shader");
+    }
+    else{
+        shader.load("shadersGL2/shader");
+        DebugBreak();
+    }
 
-	hasAltPress = false;
-	dMouse = ofVec2f(0);
-	u_point = ofVec2f(.0);
-	//-------------------------------
-	parameters.setName("settings");
-	parameters.add(pos.set("pos", ofVec2f(0), ofVec2f(-2000.), ofVec2f(2000.)));
-	parameters.add(scale.set("scale", 1., .1, 3.));
-	parameters.add(edit.set("isEdit", false));
-	parameters.add(dcol.set("d_col", .5, .0, 1.));
-	parameters.add(mult.set("mult", 1., .0, 1.));
+    hasAltPress = false;
+    dMouse = ofVec2f(0);
+    u_point = ofVec2f(.0);
+    //-------------------------------
+    parameters.setName("settings");
+    parameters.add(pos.set("pos", ofVec2f(0), ofVec2f(-2000.), ofVec2f(2000.)));
+    parameters.add(scale.set("scale", 1., .1, 3.));
+    parameters.add(edit.set("isEdit", false));
+    parameters.add(dcol.set("d_col", .5, .0, 1.));
+    parameters.add(mult.set("mult", 1., .0, 1.));
 
-	parameters.add(size_box.set("size_box", 1., 1., 100.));
+    parameters.add(size_box.set("size_box", 1., 1., 100.));
 
-	gui.setup(parameters);
-	gui.loadFromFile(SETTING_FILE);
+    gui.setup(parameters);
+    gui.loadFromFile(SETTING_FILE);
 
-	font.loadFont(OF_TTF_SANS, 20, true, true);
-	ofEnableAlphaBlending();
-	ofEnableAntiAliasing();
-	ofSetVerticalSync(true);
+    font.loadFont(OF_TTF_SANS, 20, true, true);
+    ofEnableAlphaBlending();
+    ofEnableAntiAliasing();
+    ofSetVerticalSync(true);
 
-	//-------------------------------
+    //-------------------------------
+    vector<ofVideoDevice> devices = vidGrabber.listDevices();
+    if(devices.size() > 0 ){
+    for(int i = 0; i < devices.size(); i++){
+        if(devices[i].bAvailable){
+            ofLogNotice() << devices[i].id << ": " << devices[i].deviceName;
+        }
+        else{
+            ofLogNotice() << devices[i].id << ": " << devices[i].deviceName << " - unavailable ";
+        }
+    }
 
-	movie.load(VIDEO_FILENAME);
-	movie.setLoopState(OF_LOOP_NORMAL);
-	movie.play();
-	movie.setSpeed(.25);
+        vidGrabber.setDeviceID(0);
+        vidGrabber.setDesiredFrameRate(60);
+        vidGrabber.initGrabber(1024, 768, true);
+    }
+    //-------------------------------
 
-	if(movie.isLoaded()){
-		size_image = ofVec2f(movie.getWidth(), movie.getHeight());
-	}
-	else if(image.loadImage(IMAGE_FILENAME)){
-		size_image = ofVec2f(image.getWidth(), image.getHeight());
+    movie.load(VIDEO_FILENAME);
+    //-------------------------------
+    if(vidGrabber.isInitialized()){
+        size_image = ofVec2f(vidGrabber.getWidth(), vidGrabber.getHeight());
+    }
+    else if(movie.isLoaded()){
+        movie.setLoopState(OF_LOOP_NORMAL);
+        movie.play();
+        movie.setSpeed(.25);
+        size_image = ofVec2f(movie.getWidth(), movie.getHeight());
+    }
+    else if(image.loadImage(IMAGE_FILENAME)){
+        size_image = ofVec2f(image.getWidth(), image.getHeight());
 
-	}
-	else{
-		DebugBreak();
-	}
-	anchor = ofVec2f(.5);
-	//image.setAnchorPercent(anchor.x, anchor.y);
+    }
+    else{
+        DebugBreak();
+    }
+    anchor = ofVec2f(.5);
+    //image.setAnchorPercent(anchor.x, anchor.y);
 
 
-	fbo.allocate(size_image.x, size_image.y, GL_RGBA);
-	fbo.setAnchorPercent(anchor.x, anchor.y);
+    fbo.allocate(size_image.x, size_image.y, GL_RGBA);
+    fbo.setAnchorPercent(anchor.x, anchor.y);
 
-	//-------------------------------
-	hasCaptureFrame = false;
-	gif_size = size_image *.25;
+    //-------------------------------
+    hasCaptureFrame = false;
+    gif_size = size_image;// *.5;
 
-	gifEncoder.setup(gif_size.x, gif_size.y, .60, 256);
-	ofAddListener(ofxGifEncoder::OFX_GIF_SAVE_FINISHED, this, &ofApp::onGifSaved);
+    gifEncoder.setup(gif_size.x, gif_size.y, .60, 256);
+    ofAddListener(ofxGifEncoder::OFX_GIF_SAVE_FINISHED, this, &ofApp::onGifSaved);
 
-	ofSetFullscreen(true);
+    //ofSetFullscreen(true);
 }
 
 void ofApp::onGifSaved(string &fileName){
-	cout << "gif saved as " << fileName << endl;
+    cout << "gif saved as " << fileName << endl;
 }
 
 void ofApp::exit(){
-	settings.serialize(parameters);
-	settings.save(SETTING_FILE);
+    settings.serialize(parameters);
+    settings.save(SETTING_FILE);
 
-	gifEncoder.exit();
+    gifEncoder.exit();
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	shader.update();
-	image.update();
-	movie.update();
+    shader.update();
+    image.update();
+    movie.update();
+    vidGrabber.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	ofBackgroundGradient(ofColor::white, ofColor::gray);
-	//--------------
-	fbo.begin();
+    ofBackgroundGradient(ofColor::white, ofColor::gray);
+    //--------------
+    fbo.begin();
 
-	shader.begin();
-	//shader.setUniformTexture("tex0", image.getTextureReference(), 1);
-	shader.setUniform2f("u_resolution", size_image);
-	ofVec2f t_u_point = point / size_image + anchor;
-	if(!( t_u_point.x<.0 || t_u_point.x>1. || t_u_point.y<.0 || t_u_point.y>1. ))
-		u_point = t_u_point;
-	shader.setUniform2f("u_point", u_point);
-	shader.setUniform1i("u_press", mousePress.x == -1 ? 0 : 1);
-	shader.setUniform1f("u_dcol", dcol.get());
-	shader.setUniform1f("u_time", (float) ofGetSystemTime() / 5000.f);
-	shader.setUniform1f("u_mult", mult.get());
-	shader.setUniform1f("u_size_box", size_box.get());
+    shader.begin();
+    //shader.setUniformTexture("tex0", image.getTextureReference(), 1);
+    shader.setUniform2f("u_resolution", size_image);
+    ofVec2f t_u_point = point / size_image + anchor;
+    if(!( t_u_point.x<.0 || t_u_point.x>1. || t_u_point.y<.0 || t_u_point.y>1. ))
+        u_point = t_u_point;
+    shader.setUniform2f("u_point", u_point);
+    shader.setUniform1i("u_press", mousePress.x == -1 ? 0 : 1);
+    shader.setUniform1f("u_dcol", dcol.get());
+    shader.setUniform1f("u_time", (float) ofGetSystemTime() / 5000.f);
+    shader.setUniform1f("u_mult", mult.get());
+    shader.setUniform1f("u_size_box", size_box.get());
 
-	if(image.isAllocated()){
-		image.draw(0, 0);
-	}
-	else{
-		//ofSetHexColor(0xFFFFFF);
+    if(vidGrabber.isInitialized()){
+        //shader.setUniformTexture("tex0", vidGrabber.getTextureReference(), 1);
+        vidGrabber.draw(0, 0);
+    }
+    else if(movie.isInitialized()){
+        //shader.setUniformTexture("tex0", movie.getTextureReference(), 1);
+        movie.draw(0, 0);
+    }
+    else if(image.isAllocated()){
+        image.draw(0, 0);
+    }
 
-		//shader.setUniformTexture("tex0", movie.getTextureReference(), 1);
-		movie.draw(0, 0);
-		//ofSetHexColor(0x000000);
-	}
+    shader.end();
+    fbo.end();
 
-	shader.end();
-	fbo.end();
+    //--------------
 
-	//--------------
+    ofPushMatrix();
 
-	ofPushMatrix();
+    ofTranslate(pos.get());
+    ofScale(scale.get(), scale.get());
 
-	ofTranslate(pos.get());
-	ofScale(scale.get(), scale.get());
+    //-----------------------------------
+    ofSetColor(ofColor::white);
+    ofDrawLine(ofVec2f(.0, -10000.f), ofVec2f(.0, +10000.f));
+    ofDrawLine(ofVec2f(-10000.f, .0f), ofVec2f(+10000.f, .0f));
 
-	//-----------------------------------
-	ofSetColor(ofColor::white);
-	ofDrawLine(ofVec2f(.0, -10000.f), ofVec2f(.0, +10000.f));
-	ofDrawLine(ofVec2f(-10000.f, .0f), ofVec2f(+10000.f, .0f));
+    //-----------------------------------
+    fbo.draw(0, 0);
+    //-----------------------------------
+    if(hasAltPress){
+        ofSetColor(ofColor::green);
+        ofDrawCircle(point, 10);
+    }
 
-	//-----------------------------------
-	fbo.draw(0, 0);
-	//-----------------------------------
-	if(hasAltPress){
-		ofSetColor(ofColor::green);
-		ofDrawCircle(point, 10);
-	}
+    ofPopMatrix();
 
-	ofPopMatrix();
-
-	if(hasCaptureFrame){
-		ofSetColor(ofColor::red);
-		font.drawString("hasCapture enable :" + ofToString(gifFrame), ofGetWidth() - 300, 140);
+    if(hasCaptureFrame){
+        ofSetColor(ofColor::red);
+        font.drawString("hasCapture enable :" + ofToString(gifFrame), ofGetWidth() - 300, 140);
 
 
 #if 0
@@ -209,84 +230,84 @@ void ofApp::draw(){
 		gifFrame++;
 		lastGifTime = ofGetSystemTimeMicros();
 #endif
-	}
+    }
 
-	//-----------------------------------
-	//fbo.draw(width*.5 - mouseX, height*.5 - mouseY, width, height);
+    //-----------------------------------
+    //fbo.draw(width*.5 - mouseX, height*.5 - mouseY, width, height);
 
-	gui.draw();
-	ofSetColor(ofColor::green);
-	font.drawString("fps :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 40);
+    gui.draw();
+    ofSetColor(ofColor::green);
+    font.drawString("fps :" + ofToString((int) ofGetFrameRate()), ofGetWidth() - 300, 40);
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-	switch(key){
-		case OF_KEY_ALT:
-			hasAltPress = true;
-			break;
-		case ' ':
-			if(!hasCaptureFrame){
-				gifEncoder.reset();
-				hasCaptureFrame = true;
-				gifFrame = 0;
-				lastGifTime = -1.;
-			}
-			break;
-	}
+    switch(key){
+        case OF_KEY_ALT:
+            hasAltPress = true;
+            break;
+        case ' ':
+            if(!hasCaptureFrame){
+                gifEncoder.reset();
+                hasCaptureFrame = true;
+                gifFrame = 0;
+                lastGifTime = -1.;
+            }
+            break;
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-	switch(key){
-		case OF_KEY_ALT:
-			hasAltPress = false;
-			break;
-		case ' ':
-			hasCaptureFrame = false;
-			break;
-		case 's':
-			cout << "start saving\n" << endl;
-			gifEncoder.save(string(IMAGE_FILENAME) + "_test.gif");
-			break;
-	}
+    switch(key){
+        case OF_KEY_ALT:
+            hasAltPress = false;
+            break;
+        case ' ':
+            hasCaptureFrame = false;
+            break;
+        case 's':
+            cout << "start saving\n" << endl;
+            gifEncoder.save(string(IMAGE_FILENAME) + "_test.gif");
+            break;
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y){
-	//point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
+    //point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseScrolled(int x, int y, float scrollX, float scrollY){
-	if(hasAltPress && edit.get()){
-		scale.set(scale.get() + .1*scrollY);
-	}
+    if(hasAltPress && edit.get()){
+        scale.set(scale.get() + .1*scrollY);
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-	if(mousePress.x == -1) return;
+    if(mousePress.x == -1) return;
 
-	if(hasAltPress && edit.get()){
-		dMouse = mousePress - ofVec2f(x, y) - prevPos_image;
-		pos.set(ofVec2f(-1.) * dMouse);
-	}
-	else{
-		point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
-	}
+    if(hasAltPress && edit.get()){
+        dMouse = mousePress - ofVec2f(x, y) - prevPos_image;
+        pos.set(ofVec2f(-1.) * dMouse);
+    }
+    else{
+        point = ( ofVec2f(x, y) - pos.get() ) / scale.get();
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
-	mousePress = ofVec2f(x, y);
-	prevPos_image = pos.get();
-	prevPos_point = point;
+    mousePress = ofVec2f(x, y);
+    prevPos_image = pos.get();
+    prevPos_point = point;
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-	mousePress.x = -1.f;
+    mousePress.x = -1.f;
 }
 
 //--------------------------------------------------------------
