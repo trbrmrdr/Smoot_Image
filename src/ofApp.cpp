@@ -6,11 +6,12 @@
 //#define IMAGE_FILENAME "IMG_20170722_171059.jpg"
 //#define IMAGE_FILENAME "IMG_20170722_171044.jpg"
 
-//#define IMAGE_FILENAME "Kawg-7Ip1lo.png"
+#define IMAGE_FILENAME "Kawg-7Ip1lo.png"
 
 //#define IMAGE_FILENAME "iI6L9sm9c78.jpg"
-#define IMAGE_FILENAME "AfDOYDIxkd8.jpg"
+//#define IMAGE_FILENAME "AfDOYDIxkd8.jpg"
 
+#define IMAGE_FILENAME "background.png"
 #define VIDEO_FILENAME "VID_20170722_163702.mp4_"
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -70,7 +71,7 @@ void ofApp::setup(){
 
 	//-------------------------------
 	hasCaptureFrame = false;
-	gif_size = size_image;// *.5;
+	gif_size = size_image *.25;
 
 	gifEncoder.setup(gif_size.x, gif_size.y, .60, 256);
 	ofAddListener(ofxGifEncoder::OFX_GIF_SAVE_FINISHED, this, &ofApp::onGifSaved);
@@ -156,7 +157,7 @@ void ofApp::draw(){
 		font.drawString("hasCapture enable :" + ofToString(gifFrame), ofGetWidth() - 300, 140);
 
 
-#if 1
+#if 0
 		ofPixels pixels;
 		fbo.readToPixels(pixels);
 
@@ -192,7 +193,7 @@ void ofApp::draw(){
 			gifDuration = .1;
 		else
 			gifDuration = ( t_currTime - lastGifTime ) / 100000.;
-		gifDuration *= .5;
+		gifDuration *= .15;
 		gifDuration = gifDuration < .0 ? .1 : gifDuration;
 		//gifDuration = .1f;
 		cout << gifDuration << "\n";

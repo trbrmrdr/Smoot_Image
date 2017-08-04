@@ -104,7 +104,7 @@ void main()
         st*=rotateMat(length(colC) );//+ smoothstep(.0,256.,colorD)*1000.);
         //vec4 newCol = vec4( vec3(hsb2rgb(st.x* sin(distance*.01) + sin(st.y+u_time*3.+colorD) + colorD ,1.,1.)),1.);
         vec4 newCol = vec4( vec3(hsb2rgb(st.x 
-        * sqrt(colorD*  ( (u_mult* .002) * sinab(.2 , .6, u_time*2.)))
+        * sqrt(colorD*  ( (u_mult* .0002) * sinab(.2 , .6, u_time*2.)))
         //* sqrt(colorD*  ( u_mult * sinab(.0002 , .0008, .0)))//u_time*3.)) )
         //* sqrt(colorD* u_mult  ) 
         + sin(st.y+u_time*3.),1.,1.)),1.);
